@@ -1,0 +1,54 @@
+name: Import Generic Folder
+id: 90393344-7e12-4179-927e-2d318cf40910
+category: Import Data
+description: Import a generic folder from azure blob storage.
+inputs:
+- name: Account Name
+  type: String
+  description: Specify the azure blob storage account name.
+- name: Account Key
+  type: String
+  description: Specify the azure blob storage account key.
+- name: Container
+  type: String
+  description: Specify the container of blob.
+- name: Data Folder
+  type: String
+  description: Specify the data folder of the data.
+outputs:
+- name: Output Folder
+  type: GenericFolder
+  description: The output folder to store the data.
+implementation:
+  container:
+    conda:
+      name: project_environment
+      channels:
+      - defaults
+      dependencies:
+      - python=3.6.2
+      - pip:
+        - --extra-index-url=https://test.pypi.org/simple
+        - ruamel.yaml==0.15.97
+        - fire==0.1.3
+        - azure-storage-blob==1.5.0
+        - git+$(git-url)@$(git-branch)#subdirectory=import-folder-from-azure
+    command:
+    - python
+    - -m
+    - import_folder_from_azure.generic
+    args:
+    - --account-name
+    - inputValue: Account Name
+    - --account-key
+    - inputValue: Account Key
+    - --container
+    - inputValue: Container
+    - --data-folder
+    - inputValue: Data Folder
+    - --output-folder
+    - outputPath: Output Folder
+  invoking:
+    module: import_folder_from_azure.generic
+    class: PlaceHolder
+    func: placeholder
