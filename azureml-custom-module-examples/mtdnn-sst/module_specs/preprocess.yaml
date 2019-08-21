@@ -1,0 +1,75 @@
+name: MTDNN SST Preprocess
+id: e7f69179-ebb2-4f25-8273-e2b7cbad4126
+category: Machine Learning\Preprocess
+description: MTDNN SST Preprocess module
+owner: Shiyu Peng
+inputs:
+  - name: Input data
+    type: TabularDataFolder
+    port: True
+    description: input data frame
+  - name: Based BERT model
+    type: Mode
+    default: "bert-base-uncased"
+    description: Specify MTDNN pretrained model
+    options:
+      - bert-base-uncased
+      - bert-large-uncased
+  - name: Do lower case
+    type: Boolean
+    default: True
+    description: Set this flag if you are using an uncased model.
+  - name: Maximum sequence length
+    type: Int
+    default: 512
+    description: Sepcify maximum sequence length
+  - name: Preprocessed data
+    type: TabularDataFolder
+    description: The preprocessed data.
+implementation:
+  container:
+    runConfig:
+      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:intelmpi2018.3-cuda10.0-cudnn7-ubuntu16.04
+      gpuSupport: True
+    conda:
+      name: project_environment
+      channels:
+        - defaults
+        - dependencies:
+        - python=3.6.8
+        - pip:
+          - numpy
+          - torch==1.1.0
+          - tqdm
+          - colorlog
+          - boto3
+          - pytorch-pretrained-bert==v0.6.0
+          - regex
+          - scikit-learn
+          - pyyaml
+          - pytest
+          - sentencepiece
+          - tensorboardX
+          - tensorboard
+          - future
+          - apex
+          - fairseq
+    command:
+      - python
+      - -m
+      - scripts.preprocess
+    args:
+      - --input_dir
+      - inputValue: Input data
+      - --do_lower_case
+      - inputValue: Do lower case
+      - --max_seq_len
+      - inputValue: Maximum sequence length
+      - --model
+      - inputValue: Based BERT model
+      - --output_dir
+      - inputValue: Preprocessed data
+  invoking:
+    module: scripts.preprocess
+    class: MTDNNSSTPreprocess
+    func: run

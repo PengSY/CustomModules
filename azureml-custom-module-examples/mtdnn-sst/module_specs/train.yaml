@@ -1,0 +1,75 @@
+name: MTDNN SST Train
+id: dde8f476-0c19-4a58-bc8f-cc00b05ccd16
+category: Machine Learning\Train
+description: MTDNN SST Train module
+owner: Shiyu Peng
+inputs:
+  - name: Input train data
+    type: TabularDataFolder
+    port: True
+    description: input train data
+  - name: MTDNN pretrained model
+    type: TabularDataFolder
+    port: True
+    description: input pretrained mtdnn model
+  - name: Maximum sequence length
+    type: Int
+    default: 512
+    description: Specify maximum sequence length
+  - name: Number of training epochs
+    type: Int
+    default: 5
+    description: Specify number of training epochs
+  - name: Warmup proportion
+    type: Float
+    default: 0.1.
+    description: Specify warmup proportion
+outputs:
+  - name: Output model
+    type: ModelFolder
+    description: The output directory where the model predictions and checkpoints will be written.
+implementation:
+  container:
+    runConfig:
+      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:intelmpi2018.3-cuda10.0-cudnn7-ubuntu16.04
+      gpuSupport: True
+    conda:
+      name: project_environment
+      channels:
+        - defaults
+      dependencies:
+        - python=3.6.8
+        - pip:
+          - numpy
+          - torch==1.1.0
+          - tqdm
+          - colorlog
+          - boto3
+          - pytorch-pretrained-bert==v0.6.0
+          - regex
+          - scikit-learn
+          - pyyaml
+          - pytest
+          - sentencepiece
+          - tensorboardX
+          - tensorboard
+          - future
+          - apex
+          - fairseq
+    command:
+      - python
+      - -m
+      - scripts.train
+    args:
+      - --train_data_dir
+      - inputValue: Input trian data
+      - --init_checkpoint_dir
+      - inputValue: MTDNN pretrained model
+      - --max_seq_len
+      - inputValue: Maximum sequence length
+      - --epochs
+      - inputValue: Number of training epochs
+      - --warmup
+      - inputValue: Warmup proportion
+      - --output_dir
+      - inputValue: Output model

@@ -1,0 +1,73 @@
+name: MTDNN SST Score
+id: a94b9db7-7d1f-4f54-ac44-d392ecb07049
+category: Machine Learning\Score
+description: MTDNN SST score module
+owner: Shiyu Peng
+inputs:
+  - name: Trained model
+    type: ModelFolder
+    port: True
+    description: Trained model folder
+  - name: Input test data
+    type: TabularDataFolder
+    port: True
+    description: input test data
+  - name: Use cuda
+    type: Boolean
+    default: True
+    description: Whether to use CUDA when available
+  - name: Test Batch Size
+    type: Int
+    default: 8
+    description: Total batch size for score
+outputs:
+  - name: Output score results
+    type: ModelFolder
+    description: The output directory where the model predictions and checkpoints will be written.
+implementation:
+  container:
+    runConfig:
+      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:intelmpi2018.3-cuda10.0-cudnn7-ubuntu16.04
+      gpuSupport: True
+    conda:
+      name: project_environment
+      channels:
+        - defaults
+      dependencies:
+        - python=3.6.8
+        - pip:
+          - numpy
+          - torch==1.1.0
+          - tqdm
+          - colorlog
+          - boto3
+          - pytorch-pretrained-bert==v0.6.0
+          - regex
+          - scikit-learn
+          - pyyaml
+          - pytest
+          - sentencepiece
+          - tensorboardX
+          - tensorboard
+          - future
+          - apex
+          - fairseq
+    command:
+      - python
+      - -m
+      - scripts.score
+    args:
+      - --trained_model_dir
+      - inputValue: Trained model
+      - --test_data_dir
+      - inputValue: Input test data
+      - --cuda
+      - inputValue: Use cuda
+      - --batch_size
+      - inputValue: Test batch size
+      - --output_dir
+      - inputValue: Output score results
+  invoking:
+    module: scripts.score
+    class: MTDNNScore
+    func: run
