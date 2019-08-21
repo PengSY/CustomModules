@@ -23,6 +23,7 @@ inputs:
     type: Int
     default: 512
     description: Sepcify maximum sequence length
+outputs:
   - name: Preprocessed data
     type: TabularDataFolder
     description: The preprocessed data.
@@ -35,10 +36,11 @@ implementation:
       name: project_environment
       channels:
         - defaults
-        - dependencies:
+      dependencies:
         - python=3.6.8
         - pip:
           - numpy
+          - pandas
           - torch==1.1.0
           - tqdm
           - colorlog
@@ -52,8 +54,9 @@ implementation:
           - tensorboardX
           - tensorboard
           - future
-          - apex
           - fairseq
+          - pyarrow
+          - git+https://github.com/PengSY/CustomModules.git@shiyu/add_mtdnn_sst_fine_tune#subdirectory=azureml-custom-module-examples/mtdnn-sst
     command:
       - python
       - -m
