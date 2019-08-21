@@ -39,24 +39,26 @@ implementation:
       dependencies:
         - python=3.6.8
         - pip:
-          - numpy
-          - pandas
-          - torch==1.1.0
+          - --extra-index-url=https://test.pypi.org/simple
+          - alghost==0.0.78
+          - azureml-core==1.0.48
+          - scikit-learn==0.20.3
+          - pandas==0.24.1
+          - numpy==1.16.2
+          - pyarrow==0.12.1
+          - https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
           - tqdm
           - colorlog
           - boto3
           - pytorch-pretrained-bert==v0.6.0
           - regex
-          - scikit-learn
           - pyyaml
           - pytest
           - sentencepiece
           - tensorboardX
           - tensorboard
           - future
-          - fairseq
-          - pyarrow
-          - git+https://github.com/PengSY/CustomModules.git@shiyu/add_mtdnn_sst_fine_tune#subdirectory=azureml-custom-module-examples/mtdnn-sst
+          - git+https://github.com/PengSY/CustomModules.git@shiyu/add_mtdnn_sst_fine_tune_refactor#subdirectory=azureml-custom-module-examples/mtdnn-sst
     command:
       - python
       - -m
