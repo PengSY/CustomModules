@@ -93,3 +93,23 @@ def setup_logger(logger_name='logger', log_file=None):
     logger.addHandler(ch)
 
     return logger
+
+
+class MTDNNSSTConstants:
+    TextColumn = "text"
+    LabelColumn = "label"
+    UidColumn = "uid"
+    TokenColumn = "token_id"
+    TypeIdColumn = "type_id"
+    ScoreColumn = 'Predict label'
+    IdColumn = 'Id'
+
+    PreprocessedFile = "preprocessed_data.parquet"
+    InputFile = "data.dataset.parquet"
+    ScoreFile = 'scored_file.parquet'
+    TrainedModel = 'trained_model.pt'
+    ModelMetaFile = "model_meta.json"
+    ConfigFile = 'config.json'
+    InitCheckpointFile = "mt_dnn_large_uncased.pt"
+
+    SSTMetric = ('ACC',)

@@ -4,13 +4,7 @@ import json
 from .arg_parser import train_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
-from .utils.utils import setup_logger
-
-TrainedModelName = 'trained_model.pt'
-ConfigFileName = 'config.json'
-PreprocessedFileName = "preprocessed_data.parquet"
-ModelMetaFileName = "model_meta.json"
-InitCheckpointFileName = "mt_dnn_large_uncased.pt"
+from .utils.utils import setup_logger, MTDNNSSTConstants
 
 
 def main():
@@ -18,14 +12,14 @@ def main():
 
     parser = train_parser()
     args = parser.parse_args()
-    args.init_checkpoint = os.path.join(args.init_checkpoint_dir, InitCheckpointFileName)
+    args.init_checkpoint = os.path.join(args.init_checkpoint_dir, MTDNNSSTConstants.InitCheckpointFile)
     opt = vars(args)
     opt['answer_opt'] = [opt['answer_opt']]
     opt['tasks_dropout_p'] = [args.dropout_p]
 
     # load data
     logger.info('loading data')
-    train_data_path = os.path.join(args.train_data_dir, PreprocessedFileName)
+    train_data_path = os.path.join(args.train_data_dir, MTDNNSSTConstants.PreprocessedFile)
     train_data = BatchGen.load_parquet(path=train_data_path, is_train=True, maxlen=args.max_seq_len)
     train_data = BatchGen(data=train_data,
                           batch_size=args.batch_size,
@@ -57,10 +51,10 @@ def main():
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     # save model
-    model_save_path = os.path.join(args.output_dir, TrainedModelName)
+    model_save_path = os.path.join(args.output_dir, MTDNNSSTConstants.TrainedModel)
     model.save(model_save_path)
     # save model meta
-    json.dump(opt, open(os.path.join(args.output_dir, ModelMetaFileName), "w"))
+    json.dump(opt, open(os.path.join(args.output_dir, MTDNNSSTConstants.ModelMetaFile), "w"))
 
     # Dump data_type.json as a work around until SMT deploys
     dct = {

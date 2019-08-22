@@ -3,14 +3,7 @@ import os
 import json
 from .arg_parser import preprocess_parser
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-
-TextColumn = "text"
-LabelColumn = "label"
-UidColumn = "uid"
-TokenColumn = "token_id"
-TypeIdColumn = "type_id"
-PreprocessedFileName = "preprocessed_data.parquet"
-InputFileName = "data.dataset.parquet"
+from .utils.utils import MTDNNSSTConstants
 
 
 class MTDNNSSTPreprocess:
@@ -33,8 +26,8 @@ class MTDNNSSTPreprocess:
         type_id_list = []
         for idx, row in input_df.iterrows():
             uid = idx
-            premise = row[TextColumn]
-            label = int(row[LabelColumn])
+            premise = row[MTDNNSSTConstants.TextColumn]
+            label = int(row[MTDNNSSTConstants.LabelColumn])
             if len(premise) > self.max_seq_len - 2:
                 premise = premise[:self.max_seq_len - 2]
             input_ids, _, type_ids = MTDNNSSTPreprocess._bert_feature_extractor(premise,
@@ -45,7 +38,8 @@ class MTDNNSSTPreprocess:
             label_list.append(label)
             type_id_list.append(type_ids)
         output_df = pd.DataFrame(
-            {UidColumn: uid_list, TokenColumn: token_id_list, LabelColumn: label_list, TypeIdColumn: type_id_list})
+            {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
+             MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list})
         return output_df
 
     @staticmethod
@@ -93,7 +87,7 @@ class MTDNNSSTPreprocess:
 
     @staticmethod
     def read_parquet(input_dir):
-        df = pd.read_parquet(os.path.join(input_dir, InputFileName), engine='pyarrow')
+        df = pd.read_parquet(os.path.join(input_dir, MTDNNSSTConstants.InputFile), engine='pyarrow')
         return df
 
 
@@ -110,10 +104,9 @@ def main():
     output_df = preprocessor.run(input_df)
 
     if not os.path.exists(args.output_dir):
-        print("mkdirs")
         os.makedirs(args.output_dir)
 
-    output_df.to_parquet(fname=os.path.join(args.output_dir, PreprocessedFileName), engine="pyarrow")
+    output_df.to_parquet(fname=os.path.join(args.output_dir, MTDNNSSTConstants.PreprocessedFile), engine="pyarrow")
 
     # Dump data_type.json as a work around until SMT deploys
     dct = {
