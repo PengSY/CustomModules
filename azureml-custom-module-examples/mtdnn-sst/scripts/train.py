@@ -54,6 +54,8 @@ def main():
             model.update(batch_meta, batch_data)
         logger.info('finished one epoch')
 
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
     # save model
     model_save_path = os.path.join(args.output_dir, TrainedModelName)
     model.save(model_save_path)

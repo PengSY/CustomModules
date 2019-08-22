@@ -108,6 +108,11 @@ def main():
     preprocessor = MTDNNSSTPreprocess(meta)
     input_df = MTDNNSSTPreprocess.read_parquet(args.input_dir)
     output_df = preprocessor.run(input_df)
+
+    if not os.path.exists(args.output_dir):
+        print("mkdirs")
+        os.makedirs(args.output_dir)
+
     output_df.to_parquet(fname=os.path.join(args.output_dir, PreprocessedFileName), engine="pyarrow")
 
     # Dump data_type.json as a work around until SMT deploys

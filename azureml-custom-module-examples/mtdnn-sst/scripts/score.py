@@ -56,6 +56,9 @@ def main():
     test_data = mtdnn_sst_score.load_parquet_data(args.test_data_dir)
     # score
     result_df = mtdnn_sst_score.run(test_data)
+    # save
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
     scored_file_save_path = os.path.join(args.output_dir, ScoreFileName)
     result_df.to_parquet(scored_file_save_path, engine="pyarrow")
 
