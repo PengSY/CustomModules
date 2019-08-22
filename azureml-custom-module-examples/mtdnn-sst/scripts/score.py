@@ -5,6 +5,7 @@ from .arg_parser import score_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
 from .utils.utils import eval_model, MTDNNSSTConstants
+from azureml.studio.common.logger import module_logger,TimeProfile
 
 
 class MTDNNSSTScore:
@@ -20,6 +21,7 @@ class MTDNNSSTScore:
         return
 
     def load_parquet_data(self, test_data_dir):
+        module_logger.info("Loading data.")
         test_data_path = os.path.join(test_data_dir, MTDNNSSTConstants.PreprocessedFile)
         test_data = BatchGen.load_parquet(path=test_data_path, is_train=False, maxlen=self.opt["max_seq_len"])
         return test_data
@@ -31,9 +33,10 @@ class MTDNNSSTScore:
                              gpu=self.opt["cuda"],
                              maxlen=self.opt["max_seq_len"],
                              is_train=False)
-        _, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=MTDNNSSTConstants.SSTMetric,
-                                        use_cuda=self.opt["cuda"],
-                                        with_label=False)
+        with TimeProfile("Evaluating model."):
+            _, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=MTDNNSSTConstants.SSTMetric,
+                                            use_cuda=self.opt["cuda"],
+                                            with_label=False)
         result_df = pd.DataFrame({MTDNNSSTConstants.IdColumn: ids, MTDNNSSTConstants.ScoreColumn: pred})
         return result_df
 

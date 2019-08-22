@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim.lr_scheduler import *
-from ..utils.utils import AverageMeter, setup_logger
+from ..utils.utils import AverageMeter
 from pytorch_pretrained_bert import BertAdam as Adam
 from .bert_optim import Adamax
 from .my_optim import EMA
@@ -14,17 +14,12 @@ from .matcher import SANBertNetwork
 
 
 class MTDNNModel(object):
-    def __init__(self, opt, state_dict=None, num_train_step=-1, logger=None):
+    def __init__(self, opt, state_dict=None, num_train_step=-1):
         self.config = opt
         self.updates = state_dict['updates'] if state_dict and 'updates' in state_dict else 0
         self.local_updates = 0
         self.train_loss = AverageMeter()
         self.network = SANBertNetwork(opt)
-
-        if logger:
-            self.logger = logger
-        else:
-            self.logger = setup_logger('model_logger', 'model.log')
 
         if state_dict:
             self.network.load_state_dict(state_dict['state'], strict=False)
@@ -203,7 +198,6 @@ class MTDNNModel(object):
 
     def extract(self, batch_meta, batch_data):
         self.network.eval()
-        # 'token_id': 0; 'segment_id': 1; 'mask': 2
         inputs = batch_data[:3]
         all_encoder_layers, pooled_output = self.mnetwork.bert(*inputs)
         return all_encoder_layers, pooled_output
@@ -223,11 +217,6 @@ class MTDNNModel(object):
     def load(self, checkpoint):
 
         model_state_dict = torch.load(checkpoint)
-        # if model_state_dict['config']['init_checkpoint'].rsplit('/', 1)[1] != \
-        #         self.config['init_checkpoint'].rsplit('/', 1)[1]:
-        #     self.logger.error(
-        #         '*** SANBert network is pretrained on a different Bert Model. Please use that to fine-tune for other tasks. ***')
-        #     sys.exit()
 
         self.network.load_state_dict(model_state_dict['state'], strict=False)
         self.optimizer.load_state_dict(model_state_dict['optimizer'])

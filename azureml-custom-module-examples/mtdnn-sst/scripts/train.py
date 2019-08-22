@@ -1,15 +1,15 @@
 import torch
 import os
 import json
+from datetime import datetime
 from .arg_parser import train_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
-from .utils.utils import setup_logger, MTDNNSSTConstants
+from .utils.utils import MTDNNSSTConstants
+from azureml.studio.common.logger import module_logger, TimeProfile
 
 
 def main():
-    logger = setup_logger('train_logger', '../train.log')
-
     parser = train_parser()
     args = parser.parse_args()
     args.init_checkpoint = os.path.join(args.init_checkpoint_dir, MTDNNSSTConstants.InitCheckpointFile)
@@ -18,7 +18,7 @@ def main():
     opt['tasks_dropout_p'] = [args.dropout_p]
 
     # load data
-    logger.info('loading data')
+    module_logger.info("Loading training data.")
     train_data_path = os.path.join(args.train_data_dir, MTDNNSSTConstants.PreprocessedFile)
     train_data = BatchGen.load_parquet(path=train_data_path, is_train=True, maxlen=args.max_seq_len)
     train_data = BatchGen(data=train_data,
@@ -28,7 +28,7 @@ def main():
                           maxlen=args.max_seq_len)
     train_iter = iter(train_data)
     # load model
-    logger.info('loading model')
+    module_logger.info("Loading init model.")
     state_dict = torch.load(args.init_checkpoint)
     config = state_dict['config']
     config['attention_probs_dropout_prob'] = args.bert_dropout_p
@@ -37,20 +37,24 @@ def main():
 
     # init model
     num_all_batches = args.epochs * len(train_data) // args.grad_accumulation_step
-    model = MTDNNModel(opt, state_dict=state_dict, num_train_step=num_all_batches, logger=logger)
+    model = MTDNNModel(opt, state_dict=state_dict, num_train_step=num_all_batches)
 
     # train model
-    logger.info('training')
-    for epoch in range(0, args.epochs):
-        train_data.reset()
-        for i in range(len(train_data)):
-            batch_meta, batch_data = next(train_iter)
-            model.update(batch_meta, batch_data)
-        logger.info('finished one epoch')
+    with TimeProfile("Training MT-DNN model."):
+        start_time = datetime.now()
+        for epoch in range(0, args.epochs):
+            train_data.reset()
+            for i in range(len(train_data)):
+                batch_meta, batch_data = next(train_iter)
+                model.update(batch_meta, batch_data)
+            remaining_time = str((datetime.now() - start_time) / (epoch + 1) * (args.epochs - epoch - 1)).split(".")[0]
+            module_logger.info(
+                f"Epoch[{epoch:2f}] train loss[{model.train_loss.avg:.5f}] remaining[{remaining_time:3}]")
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     # save model
+    module_logger.info("Saving MT-DNN model.")
     model_save_path = os.path.join(args.output_dir, MTDNNSSTConstants.TrainedModel)
     model.save(model_save_path)
     # save model meta
