@@ -1,11 +1,12 @@
 import json
 import os
+import torch
 import pandas as pd
 from .arg_parser import score_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
 from .utils.utils import eval_model, MTDNNSSTConstants
-from azureml.studio.common.logger import module_logger,TimeProfile
+from azureml.studio.common.logger import module_logger, TimeProfile
 
 
 class MTDNNSSTScore:
@@ -14,6 +15,11 @@ class MTDNNSSTScore:
         opt = json.load(open(os.path.join(trained_model_dir, MTDNNSSTConstants.ModelMetaFile)))
         opt["batch_size"] = meta["Test batch size"]
         opt["cuda"] = meta["Use cuda"]
+
+        if opt["cuda"] and not torch.cuda.is_available():
+            module_logger.info("The compute doesn't have a NVIDIA GPU, changed to use CPU.")
+            opt["cuda"] = False
+
         self.opt = opt
         self.model = MTDNNModel(opt)
         self.model.load(os.path.join(trained_model_dir, MTDNNSSTConstants.TrainedModel))

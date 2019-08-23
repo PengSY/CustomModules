@@ -13,6 +13,11 @@ def main():
     parser = train_parser()
     args = parser.parse_args()
     args.init_checkpoint = os.path.join(args.init_checkpoint_dir, MTDNNSSTConstants.InitCheckpointFile)
+
+    if args.cuda and not torch.cuda.is_available():
+        module_logger.info("The compute doesn't have a NVIDIA GPU, changed to use CPU.")
+        args.cuda = False
+
     opt = vars(args)
     opt['answer_opt'] = [opt['answer_opt']]
     opt['tasks_dropout_p'] = [args.dropout_p]
