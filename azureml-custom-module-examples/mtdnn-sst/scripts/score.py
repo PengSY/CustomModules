@@ -7,6 +7,9 @@ from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
 from .utils.utils import eval_model, MTDNNSSTConstants
 from azureml.studio.common.logger import module_logger
+from azureml.studio.common.datatable.data_table import DataTable
+from azureml.studio.common.datatypes import DataTypes
+from azureml.studio.modulehost.handler.port_io_handler import OutputHandler
 
 
 class MTDNNSSTScore:
@@ -46,12 +49,13 @@ class MTDNNSSTScore:
                                               with_label=with_label)
         result_df = pd.DataFrame({MTDNNSSTConstants.IdColumn: ids, MTDNNSSTConstants.ScoreColumn: pred})
         result_df = test_data_df.join(result_df.set_index(MTDNNSSTConstants.IdColumn), on=MTDNNSSTConstants.IdColumn)
+        result_dt = DataTable(result_df)
         if with_label:
             metric_str = str()
             for metric in MTDNNSSTConstants.SSTMetric:
                 metric_str += f"{metric}: {metrics[metric]}\n"
             module_logger.info(f"Evaluate model: \n{metric_str}")
-        return result_df
+        return result_dt
 
 
 def main():
@@ -64,12 +68,12 @@ def main():
     # load data
     test_data = mtdnn_sst_score.load_parquet_data(args.test_data_dir)
     # score
-    result_df = mtdnn_sst_score.run(test_data)
+    result_dt = mtdnn_sst_score.run(test_data)
     # save
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    scored_file_save_path = os.path.join(args.output_dir, MTDNNSSTConstants.ScoreFile)
-    result_df.to_parquet(scored_file_save_path, engine="pyarrow")
+    OutputHandler.handle_output(data=result_dt, file_path=args.output_dir, file_name=MTDNNSSTConstants.ScoreFile,
+                                data_type=DataTypes.DATASET)
 
     # Dump data_type.json as a work around until SMT deploys
     dct = {

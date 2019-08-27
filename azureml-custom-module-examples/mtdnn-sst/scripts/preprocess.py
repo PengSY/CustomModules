@@ -5,6 +5,9 @@ from .arg_parser import preprocess_parser
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 from .utils.utils import MTDNNSSTConstants
 from azureml.studio.common.logger import module_logger, TimeProfile
+from azureml.studio.common.datatable.data_table import DataTable
+from azureml.studio.common.datatypes import DataTypes
+from azureml.studio.modulehost.handler.port_io_handler import OutputHandler
 
 
 class MTDNNSSTPreprocess:
@@ -49,8 +52,9 @@ class MTDNNSSTPreprocess:
                 output_df = pd.DataFrame(
                     {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
                      MTDNNSSTConstants.TypeIdColumn: type_id_list})
+            output_dt = DataTable(output_df)
 
-        return output_df
+        return output_dt
 
     @staticmethod
     def _truncate_seq_pair(tokens_a, tokens_b, max_length):
@@ -112,12 +116,13 @@ def main():
     preprocessor = MTDNNSSTPreprocess(meta)
     module_logger.info("Loading dataset to apply mtdnn sst preprocess.")
     input_df = MTDNNSSTPreprocess.read_parquet(args.input_dir)
-    output_df = preprocessor.run(input_df)
+    output_dt = preprocessor.run(input_df)
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
-    output_df.to_parquet(fname=os.path.join(args.output_dir, MTDNNSSTConstants.PreprocessedFile), engine="pyarrow")
+    OutputHandler.handle_output(data=output_dt, file_path=args.output_dir, file_name=MTDNNSSTConstants.PreprocessedFile,
+                                data_type=DataTypes.DATASET)
 
     # Dump data_type.json as a work around until SMT deploys
     dct = {
