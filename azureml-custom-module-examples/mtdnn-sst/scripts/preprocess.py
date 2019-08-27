@@ -21,6 +21,8 @@ class MTDNNSSTPreprocess:
             # load tokenizer
             tokenizer = BertTokenizer.from_pretrained(self.model, do_lower_case=self.do_lower_case)
 
+            is_with_label = MTDNNSSTConstants.LabelColumn in input_df.columns
+
             # build data
             uid_list = []
             token_id_list = []
@@ -29,7 +31,6 @@ class MTDNNSSTPreprocess:
             for idx, row in input_df.iterrows():
                 uid = idx
                 premise = row[MTDNNSSTConstants.TextColumn]
-                label = int(row[MTDNNSSTConstants.LabelColumn])
                 if len(premise) > self.max_seq_len - 2:
                     premise = premise[:self.max_seq_len - 2]
                 input_ids, _, type_ids = MTDNNSSTPreprocess._bert_feature_extractor(premise,
@@ -37,11 +38,18 @@ class MTDNNSSTPreprocess:
                                                                                     tokenize_fn=tokenizer)
                 uid_list.append(uid)
                 token_id_list.append(input_ids)
-                label_list.append(label)
+                if is_with_label:
+                    label_list.append(int(row[MTDNNSSTConstants.LabelColumn]))
                 type_id_list.append(type_ids)
-            output_df = pd.DataFrame(
-                {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
-                 MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list})
+            if is_with_label:
+                output_df = pd.DataFrame(
+                    {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
+                     MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list})
+            else:
+                output_df = pd.DataFrame(
+                    {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
+                     MTDNNSSTConstants.TypeIdColumn: type_id_list})
+
         return output_df
 
     @staticmethod
