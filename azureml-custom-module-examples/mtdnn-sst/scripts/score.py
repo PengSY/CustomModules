@@ -6,7 +6,7 @@ from .arg_parser import score_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
 from .utils.utils import eval_model, MTDNNSSTConstants
-from azureml.studio.common.logger import module_logger, TimeProfile
+from azureml.studio.common.logger import module_logger
 
 
 class MTDNNSSTScore:
@@ -33,17 +33,24 @@ class MTDNNSSTScore:
         return test_data
 
     def run(self, test_data: pd.DataFrame, meta: dict = None):
+        test_data_df = test_data
+        with_label = MTDNNSSTConstants.LabelColumn in test_data_df.columns
         test_data = BatchGen(data=test_data,
                              batch_size=self.opt["batch_size"],
                              dropout_w=self.opt["dropout_w"],
                              gpu=self.opt["cuda"],
                              maxlen=self.opt["max_seq_len"],
                              is_train=False)
-        with TimeProfile("Evaluating model."):
-            _, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=MTDNNSSTConstants.SSTMetric,
-                                            use_cuda=self.opt["cuda"],
-                                            with_label=False)
+        metrics, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=MTDNNSSTConstants.SSTMetric,
+                                              use_cuda=self.opt["cuda"],
+                                              with_label=with_label)
         result_df = pd.DataFrame({MTDNNSSTConstants.IdColumn: ids, MTDNNSSTConstants.ScoreColumn: pred})
+        result_df = test_data_df.join(result_df.set_index(MTDNNSSTConstants.IdColumn), on=MTDNNSSTConstants.IdColumn)
+        if with_label:
+            metric_str = str()
+            for metric in MTDNNSSTConstants.SSTMetric:
+                metric_str += f"{metric}: {metrics[metric]}\n"
+            module_logger.info(f"Evaluate model: \n{metric_str}")
         return result_df
 
 
