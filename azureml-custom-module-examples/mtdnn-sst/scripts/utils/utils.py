@@ -102,11 +102,10 @@ class MTDNNSSTConstants:
     TokenColumn = "token_id"
     TypeIdColumn = "type_id"
     ScoreColumn = 'Predict label'
-    IdColumn = 'Id'
 
-    PreprocessedFile = "preprocessed_data.parquet"
+    PreprocessedFile = "data.dataset.parquet"
     InputFile = "data.dataset.parquet"
-    ScoreFile = 'scored_file.parquet'
+    ScoreFile = 'data.dataset.parquet'
     TrainedModel = 'trained_model.pt'
     ModelMetaFile = "model_meta.json"
     ConfigFile = 'config.json'

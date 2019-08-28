@@ -57,7 +57,6 @@ class BatchGen:
                     if (not pairwise) and (len(sample['token_id']) > maxlen):
                         continue
                 data.append(sample)
-            print('Loaded {} samples out of {}'.format(len(data), cnt))
             return data
 
     @staticmethod
@@ -68,6 +67,8 @@ class BatchGen:
     @staticmethod
     def load_dataframe(df, is_train=True, maxlen=128, factor=1.0, pairwise=False):
         data = []
+        df['token_id']=df['token_id'].apply(lambda x:eval(x))
+        df['type_id']=df['type_id'].apply(lambda x:eval(x))
         for _, row in df.iterrows():
             row['factor'] = factor
             if is_train:

@@ -54,7 +54,7 @@ def main():
                 model.update(batch_meta, batch_data)
             remaining_time = str((datetime.now() - start_time) / (epoch + 1) * (args.epochs - epoch - 1)).split(".")[0]
             module_logger.info(
-                f"Epoch[{epoch:2f}] train loss[{model.train_loss.avg:.5f}] remaining[{remaining_time:3}]")
+                f"Epoch[{epoch:2}] train loss[{model.train_loss.avg:.5f}] remaining[{remaining_time:3}]")
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)

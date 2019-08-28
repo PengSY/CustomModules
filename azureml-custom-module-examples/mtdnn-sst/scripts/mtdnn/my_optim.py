@@ -79,7 +79,6 @@ class WeightNorm(torch.nn.Module):
         fn = WeightNorm(weights, dim)
         for name in weights:
             if hasattr(module, name):
-                print('Applying weight norm to {} - {}'.format(str(module), name))
                 weight = getattr(module, name)
                 del module._parameters[name]
                 module.register_parameter(

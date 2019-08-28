@@ -10,6 +10,7 @@ from azureml.studio.common.logger import module_logger
 from azureml.studio.common.datatable.data_table import DataTable
 from azureml.studio.common.datatypes import DataTypes
 from azureml.studio.modulehost.handler.port_io_handler import OutputHandler
+from .utils.metrics import Metric
 
 
 class MTDNNSSTScore:
@@ -38,18 +39,23 @@ class MTDNNSSTScore:
 
     def run(self, test_data_df: pd.DataFrame, meta: dict = None):
         with_label = MTDNNSSTConstants.LabelColumn in test_data_df.columns
-        test_data=BatchGen.load_dataframe(test_data_df)
+        test_data = BatchGen.load_dataframe(test_data_df)
         test_data = BatchGen(data=test_data,
                              batch_size=self.opt["batch_size"],
                              dropout_w=self.opt["dropout_w"],
                              gpu=self.opt["cuda"],
                              maxlen=self.opt["max_seq_len"],
                              is_train=False)
-        metrics, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=MTDNNSSTConstants.SSTMetric,
+        sst_metric = tuple(Metric[metric_name] for metric_name in MTDNNSSTConstants.SSTMetric)
+        metrics, pred, _, _, ids = eval_model(self.model, test_data, metric_meta=sst_metric,
                                               use_cuda=self.opt["cuda"],
                                               with_label=with_label)
-        result_df = pd.DataFrame({MTDNNSSTConstants.IdColumn: ids, MTDNNSSTConstants.ScoreColumn: pred})
-        result_df = test_data_df.join(result_df.set_index(MTDNNSSTConstants.IdColumn), on=MTDNNSSTConstants.IdColumn)
+        result_df = pd.DataFrame({MTDNNSSTConstants.UidColumn: ids, MTDNNSSTConstants.ScoreColumn: pred})
+        test_data_df[MTDNNSSTConstants.TypeIdColumn] = test_data_df[MTDNNSSTConstants.TypeIdColumn].apply(
+            lambda x: str(x))
+        test_data_df[MTDNNSSTConstants.TokenColumn] = test_data_df[MTDNNSSTConstants.TokenColumn].apply(
+            lambda x: str(x))
+        result_df = test_data_df.join(result_df.set_index(MTDNNSSTConstants.UidColumn), on=MTDNNSSTConstants.UidColumn)
         result_dt = DataTable(result_df)
         if with_label:
             metric_str = str()

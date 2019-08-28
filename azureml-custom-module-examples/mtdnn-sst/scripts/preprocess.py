@@ -31,6 +31,7 @@ class MTDNNSSTPreprocess:
             token_id_list = []
             label_list = []
             type_id_list = []
+            premise_list = []
             for idx, row in input_df.iterrows():
                 uid = idx
                 premise = row[MTDNNSSTConstants.TextColumn]
@@ -40,18 +41,20 @@ class MTDNNSSTPreprocess:
                                                                                     max_seq_length=self.max_seq_len,
                                                                                     tokenize_fn=tokenizer)
                 uid_list.append(uid)
-                token_id_list.append(input_ids)
+                token_id_list.append(str(input_ids))
                 if is_with_label:
                     label_list.append(int(row[MTDNNSSTConstants.LabelColumn]))
-                type_id_list.append(type_ids)
+                type_id_list.append(str(type_ids))
+                premise_list.append(premise)
             if is_with_label:
                 output_df = pd.DataFrame(
                     {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
-                     MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list})
+                     MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list,
+                     MTDNNSSTConstants.TextColumn: premise_list})
             else:
                 output_df = pd.DataFrame(
                     {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
-                     MTDNNSSTConstants.TypeIdColumn: type_id_list})
+                     MTDNNSSTConstants.TypeIdColumn: type_id_list, MTDNNSSTConstants.TextColumn: premise_list})
             output_dt = DataTable(output_df)
 
         return output_dt
