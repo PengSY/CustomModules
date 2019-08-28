@@ -32,12 +32,13 @@ class MTDNNSSTScore:
     def load_parquet_data(self, test_data_dir):
         module_logger.info("Loading data.")
         test_data_path = os.path.join(test_data_dir, MTDNNSSTConstants.PreprocessedFile)
-        test_data = BatchGen.load_parquet(path=test_data_path, is_train=False, maxlen=self.opt["max_seq_len"])
+        # test_data = BatchGen.load_parquet(path=test_data_path, is_train=False, maxlen=self.opt["max_seq_len"])
+        test_data = pd.read_parquet(test_data_path, engine='pyarrow')
         return test_data
 
-    def run(self, test_data: pd.DataFrame, meta: dict = None):
-        test_data_df = test_data
+    def run(self, test_data_df: pd.DataFrame, meta: dict = None):
         with_label = MTDNNSSTConstants.LabelColumn in test_data_df.columns
+        test_data=BatchGen.load_dataframe(test_data_df)
         test_data = BatchGen(data=test_data,
                              batch_size=self.opt["batch_size"],
                              dropout_w=self.opt["dropout_w"],
