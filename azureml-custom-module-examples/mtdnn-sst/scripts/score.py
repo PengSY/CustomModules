@@ -1,7 +1,8 @@
+import pandas as pd
+import pyarrow.parquet as pq  # noqa: F401 workaround for pyarrow loaded
 import json
 import os
 import torch
-import pandas as pd
 from .arg_parser import score_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel

@@ -1,4 +1,5 @@
 import pandas as pd
+import pyarrow.parquet as pq  # noqa: F401 workaround for pyarrow loaded
 import os
 import json
 from .arg_parser import preprocess_parser

@@ -1,3 +1,4 @@
+import pyarrow.parquet as pq  # noqa: F401 workaround for pyarrow loaded
 import torch
 import os
 import json
