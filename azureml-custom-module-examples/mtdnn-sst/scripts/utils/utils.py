@@ -112,3 +112,10 @@ class MTDNNSSTConstants:
     InitCheckpointFile = "mt_dnn_large_uncased.pt"
 
     SSTMetric = ('ACC',)
+
+    PreprocessLogFile="preprocess.log"
+    PreprocessLogger="preprocess_logger"
+    TrainLogFile="train.log"
+    TrainLogger="train_logger"
+    ScoreLogFile="score.log"
+    ScoreLogger="score_logger"

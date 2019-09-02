@@ -4,8 +4,7 @@ import os
 import json
 from .arg_parser import preprocess_parser
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-from .utils.utils import MTDNNSSTConstants
-from azureml.studio.common.logger import module_logger, TimeProfile
+from .utils.utils import MTDNNSSTConstants, setup_logger
 from azureml.studio.common.datatable.data_table import DataTable
 from azureml.studio.common.datatypes import DataTypes
 from azureml.studio.modulehost.handler.port_io_handler import OutputHandler
@@ -19,44 +18,43 @@ class MTDNNSSTPreprocess:
         return
 
     def run(self, input_df: pd.DataFrame, meta: dict = None):
-        with TimeProfile("Applying preprocess."):
-            assert 1 <= len(input_df.columns) <= 2
+        assert 1 <= len(input_df.columns) <= 2
 
-            # load tokenizer
-            tokenizer = BertTokenizer.from_pretrained(self.model, do_lower_case=self.do_lower_case)
+        # load tokenizer
+        tokenizer = BertTokenizer.from_pretrained(self.model, do_lower_case=self.do_lower_case)
 
-            is_with_label = MTDNNSSTConstants.LabelColumn in input_df.columns
+        is_with_label = MTDNNSSTConstants.LabelColumn in input_df.columns
 
-            # build data
-            uid_list = []
-            token_id_list = []
-            label_list = []
-            type_id_list = []
-            premise_list = []
-            for idx, row in input_df.iterrows():
-                uid = idx
-                premise = row[MTDNNSSTConstants.TextColumn]
-                if len(premise) > self.max_seq_len - 2:
-                    premise = premise[:self.max_seq_len - 2]
-                input_ids, _, type_ids = MTDNNSSTPreprocess._bert_feature_extractor(premise,
-                                                                                    max_seq_length=self.max_seq_len,
-                                                                                    tokenize_fn=tokenizer)
-                uid_list.append(uid)
-                token_id_list.append(str(input_ids))
-                if is_with_label:
-                    label_list.append(int(row[MTDNNSSTConstants.LabelColumn]))
-                type_id_list.append(str(type_ids))
-                premise_list.append(premise)
+        # build data
+        uid_list = []
+        token_id_list = []
+        label_list = []
+        type_id_list = []
+        premise_list = []
+        for idx, row in input_df.iterrows():
+            uid = idx
+            premise = row[MTDNNSSTConstants.TextColumn]
+            if len(premise) > self.max_seq_len - 2:
+                premise = premise[:self.max_seq_len - 2]
+            input_ids, _, type_ids = MTDNNSSTPreprocess._bert_feature_extractor(premise,
+                                                                                max_seq_length=self.max_seq_len,
+                                                                                tokenize_fn=tokenizer)
+            uid_list.append(uid)
+            token_id_list.append(str(input_ids))
             if is_with_label:
-                output_df = pd.DataFrame(
-                    {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
-                     MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list,
-                     MTDNNSSTConstants.TextColumn: premise_list})
-            else:
-                output_df = pd.DataFrame(
-                    {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
-                     MTDNNSSTConstants.TypeIdColumn: type_id_list, MTDNNSSTConstants.TextColumn: premise_list})
-            output_dt = DataTable(output_df)
+                label_list.append(int(row[MTDNNSSTConstants.LabelColumn]))
+            type_id_list.append(str(type_ids))
+            premise_list.append(premise)
+        if is_with_label:
+            output_df = pd.DataFrame(
+                {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
+                 MTDNNSSTConstants.LabelColumn: label_list, MTDNNSSTConstants.TypeIdColumn: type_id_list,
+                 MTDNNSSTConstants.TextColumn: premise_list})
+        else:
+            output_df = pd.DataFrame(
+                {MTDNNSSTConstants.UidColumn: uid_list, MTDNNSSTConstants.TokenColumn: token_id_list,
+                 MTDNNSSTConstants.TypeIdColumn: type_id_list, MTDNNSSTConstants.TextColumn: premise_list})
+        output_dt = DataTable(output_df)
 
         return output_dt
 
@@ -110,6 +108,7 @@ class MTDNNSSTPreprocess:
 
 
 def main():
+    logger = setup_logger(MTDNNSSTConstants.PreprocessLogger, MTDNNSSTConstants.PreprocessLogFile)
     parser = preprocess_parser()
     args = parser.parse_args()
 
@@ -118,7 +117,7 @@ def main():
             'Maximum sequence length': args.max_seq_len}
 
     preprocessor = MTDNNSSTPreprocess(meta)
-    module_logger.info("Loading dataset to apply mtdnn sst preprocess.")
+    logger.info("Loading dataset to apply mtdnn sst preprocess.")
     input_df = MTDNNSSTPreprocess.read_parquet(args.input_dir)
     output_dt = preprocessor.run(input_df)
 

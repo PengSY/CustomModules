@@ -6,8 +6,7 @@ import torch
 from .arg_parser import score_parser
 from .mtdnn.batcher import BatchGen
 from .mtdnn.model import MTDNNModel
-from .utils.utils import eval_model, MTDNNSSTConstants
-from azureml.studio.common.logger import module_logger
+from .utils.utils import eval_model, MTDNNSSTConstants, setup_logger
 from azureml.studio.common.datatable.data_table import DataTable
 from azureml.studio.common.datatypes import DataTypes
 from azureml.studio.modulehost.handler.port_io_handler import OutputHandler
@@ -17,12 +16,13 @@ from .utils.metrics import Metric
 class MTDNNSSTScore:
     def __init__(self, trained_model_dir, meta: dict):
         # load trained model
+        self.logger = setup_logger(MTDNNSSTConstants.ScoreLogger, MTDNNSSTConstants.ScoreLogFile)
         opt = json.load(open(os.path.join(trained_model_dir, MTDNNSSTConstants.ModelMetaFile)))
         opt["batch_size"] = meta["Test batch size"]
         opt["cuda"] = meta["Use cuda"]
 
         if opt["cuda"] and not torch.cuda.is_available():
-            module_logger.info("The compute doesn't have a NVIDIA GPU, changed to use CPU.")
+            self.logger.info("The compute doesn't have a NVIDIA GPU, changed to use CPU.")
             opt["cuda"] = False
 
         self.opt = opt
@@ -32,7 +32,7 @@ class MTDNNSSTScore:
         return
 
     def load_parquet_data(self, test_data_dir):
-        module_logger.info("Loading data.")
+        self.logger.info("Loading data.")
         test_data_path = os.path.join(test_data_dir, MTDNNSSTConstants.PreprocessedFile)
         # test_data = BatchGen.load_parquet(path=test_data_path, is_train=False, maxlen=self.opt["max_seq_len"])
         test_data = pd.read_parquet(test_data_path, engine='pyarrow')
@@ -62,7 +62,7 @@ class MTDNNSSTScore:
             metric_str = str()
             for metric in MTDNNSSTConstants.SSTMetric:
                 metric_str += f"{metric}: {metrics[metric]}\n"
-            module_logger.info(f"Evaluate model: \n{metric_str}")
+            self.logger.info(f"Evaluate model: \n{metric_str}")
         return result_dt
 
 
