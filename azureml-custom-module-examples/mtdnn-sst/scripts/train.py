@@ -35,7 +35,10 @@ def main():
     train_iter = iter(train_data)
     # load model
     module_logger.info("Loading init model.")
-    state_dict = torch.load(args.init_checkpoint)
+    if args.cuda:
+        state_dict = torch.load(args.init_checkpoint)
+    else:
+        state_dict = torch.load(args.init_checkpoint, map_location="cpu")
     config = state_dict['config']
     config['attention_probs_dropout_prob'] = args.bert_dropout_p
     config['hidden_dropout_prob'] = args.bert_dropout_p

@@ -23,7 +23,7 @@ class MTDNNModel(object):
 
         if state_dict:
             self.network.load_state_dict(state_dict['state'], strict=False)
-        self.mnetwork = nn.DataParallel(self.network) if opt['multi_gpu_on'] else self.network
+        self.mnetwork = nn.DataParallel(self.network) if opt['multi_gpu_on'] and opt['cuda'] else self.network
         self.total_param = sum([p.nelement() for p in self.network.parameters() if p.requires_grad])
         if opt['cuda']:
             self.network.cuda()
@@ -215,8 +215,10 @@ class MTDNNModel(object):
         torch.save(params, filename)
 
     def load(self, checkpoint):
-
-        model_state_dict = torch.load(checkpoint)
+        if self.config['cuda']:
+            model_state_dict = torch.load(checkpoint)
+        else:
+            model_state_dict=torch.load(checkpoint,map_location="cpu")
 
         self.network.load_state_dict(model_state_dict['state'], strict=False)
         self.optimizer.load_state_dict(model_state_dict['optimizer'])

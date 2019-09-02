@@ -13,8 +13,8 @@ inputs:
     port: True
     description: input test data
   - name: Use cuda
-    type: Boolean
-    default: True
+    type: String
+    default: "True"
     description: Whether to use CUDA when available
   - name: Test batch size
     type: Int

@@ -16,8 +16,8 @@ inputs:
       - bert-base-uncased
       - bert-large-uncased
   - name: Do lower case
-    type: Boolean
-    default: True
+    type: String
+    default: "True"
     description: Set this flag if you are using an uncased model.
   - name: Maximum sequence length
     type: Int
