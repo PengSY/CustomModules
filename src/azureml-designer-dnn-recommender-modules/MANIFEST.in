@@ -1,0 +1,2 @@
+include azureml/designer/modules/recommenders/dnn/module_specs/score_wide_and_deep_recommender.yaml
+include azureml/designer/modules/recommenders/dnn/module_specs/train_wide_and_deep_recommender.yaml

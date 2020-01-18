@@ -1,0 +1,110 @@
+name: Score Wide & Deep Recommender
+id: 6aea3be1-d2b8-43e6-aa47-acfceb57935e
+version: 0.0.1.763732
+isDeterministic: true
+category: Recommendation
+description: Score a dataset using the Wide and Deep recommendation model.
+releaseState: Release
+inputs:
+  - name: Trained Wide and Deep recommendation model
+    type: ModelDirectory
+    port: true
+    description: Trained Wide and Deep recommendation model
+  - name: Dataset to score
+    type: DataFrameDirectory
+    port: true
+    description: Dataset to score
+  - name: User features
+    type: DataFrameDirectory
+    port: true
+    optional: true
+    description: User features
+  - name: Item features
+    type: DataFrameDirectory
+    port: true
+    optional: true
+    description: Item features
+  - name: Training data
+    type: DataFrameDirectory
+    port: true
+    optional: true
+    description: Dataset containing the training data. (Used to filter out already rated
+      items from prediction)
+  - name: Recommender prediction kind
+    type: Mode
+    default: Item Recommendation
+    description: Specify the type of prediction the recommendation should output
+    options:
+      - Rating Prediction
+      - Item Recommendation:
+          - name: Recommended item selection
+            type: Mode
+            default: From Rated Items (for model evaluation)
+            description: Select the set of items to make recommendations from
+            options:
+              - From All Items
+              - From Rated Items (for model evaluation):
+                  - name: Minimum size of the recommendation pool for a single user
+                    type: Int
+                    default: 2
+                    description: Specify the minimum size of the recommendation pool for each user
+                    min: 1
+              - From Unrated Items (to suggest new items to users)
+          - name: Maximum number of items to recommend to a user
+            type: Int
+            default: 5
+            description: Specify the maximum number of items to recommend to a user
+            min: 1
+          - name: Whether to return the predicted ratings of the items along with the labels
+            type: Boolean
+            description: Specify whether to return the predicted ratings of the items along
+              with the labels
+outputs:
+  - name: Scored dataset
+    type: DataFrameDirectory
+    description: Scored dataset
+implementation:
+  container:
+    runConfig:
+      baseDockerImage: mcr.microsoft.com/azureml/base:intelmpi2018.3-ubuntu16.04
+      gpuSupport: false
+    conda:
+      name: project_environment
+      channels:
+        - defaults
+      dependencies:
+        - python=3.6.8
+        - pip:
+            - azureml-designer-dnn-recommender-modules==0.0.1
+    command:
+      - python
+      - -m
+      - azureml.designer.modules.recommenders.dnn.wide_and_deep.score.run
+    args:
+      - --learner
+      - inputPath: Trained Wide and Deep recommendation model
+      - --test_interactions
+      - inputPath: Dataset to score
+      - --user_features
+      - inputPath: User features
+      - --item_features
+      - inputPath: Item features
+      - --training_interactions
+      - inputPath: Training data
+      - --prediction_kind
+      - inputValue: Recommender prediction kind
+      - --recommended_item_selection
+      - inputValue: Recommended item selection
+      - --max_recommended_item_count
+      - inputValue: Maximum number of items to recommend to a user
+      - --min_recommendation_pool_size
+      - inputValue: Minimum size of the recommendation pool for a single user
+      - --return_ratings
+      - inputValue: Whether to return the predicted ratings of the items along with
+          the labels
+      - --scored_data
+      - outputPath: Scored dataset
+  invoking:
+    module: azureml.designer.modules.recommenders.dnn.wide_and_deep.score.score_wide_and_deep_recommender
+    class: ScoreWideAndDeepRecommenderModule
+    func: run
