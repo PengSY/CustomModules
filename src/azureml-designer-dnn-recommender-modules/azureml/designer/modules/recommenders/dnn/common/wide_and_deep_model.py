@@ -166,7 +166,7 @@ class WideAndDeepModel:
         training_data = self.feature_builder.build(training_data)
         self.steps_per_iteration = math.ceil(training_data.row_size / self.batch_size)
         model = self._build_model()
-        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=self.epochs / hvd.size(),
+        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=int(self.epochs / hvd.size()),
                                                    shuffle=True)
         log_hook = TrainLogHook(steps_per_iter=self.steps_per_iteration)
         module_logger.info(f"Start to train model, rank {self.hvd_rank}")
