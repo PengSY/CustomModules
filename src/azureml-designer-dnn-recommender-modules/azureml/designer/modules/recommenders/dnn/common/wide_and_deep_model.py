@@ -60,7 +60,8 @@ class WideAndDeepModel:
 
         hvd.init()
         self.hvd_rank = hvd.rank()
-        tf.config.experimental.set_visible_devices([str(hvd.local_rank())], 'GPU')
+        gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+        tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
         if self.hvd_rank != 0:
             self.model_dir = None
 
