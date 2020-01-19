@@ -72,6 +72,18 @@ class TrainWideAndDeepRecommenderModule:
         return interactions, user_features, item_features
 
     @staticmethod
+    def _handle_partition_dataset(interactions: InteractionDataset):
+        interactions_df = interactions.df
+        print(interactions_df.columns)
+        if '_partition_' in interactions_df.columns:
+            interactions_df = interactions_df.drop(columns=['_partition_'])
+            interactions = InteractionDataset(df=interactions_df, name=interactions.name)
+
+        print(interactions_df.columns)
+
+        return interactions
+
+    @staticmethod
     def _validate_preprocessed_dataset(interactions: InteractionDataset, user_features: FeatureDataset,
                                        item_features: FeatureDataset):
         if interactions.row_size <= 0:
@@ -112,6 +124,7 @@ class TrainWideAndDeepRecommenderModule:
             deep_dropout: float,
             batch_norm: Boolean,
             model_dir: str):
+        interactions = self._handle_partition_dataset(interactions)
         self._validate_datasets(interactions, user_features=user_features,
                                 item_features=item_features)
         self._preprocess(interactions, user_features=user_features,
