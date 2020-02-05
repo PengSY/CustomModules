@@ -10,7 +10,6 @@ from azureml.designer.modules.recommenders.dnn.common.extend_types import IntTup
     OptimizerSelection, Boolean
 from azureml.designer.modules.recommenders.dnn.common.dataset import InteractionDataset, FeatureDataset, Dataset
 from azureml.designer.modules.recommenders.dnn.common.wide_and_deep_model import WideAndDeepModel
-import horovod.tensorflow as hvd
 
 
 class TrainWideAndDeepRecommenderModule:
@@ -123,7 +122,8 @@ class TrainWideAndDeepRecommenderModule:
             deep_activation_fn: DeepActivationSelection,
             deep_dropout: float,
             batch_norm: Boolean,
-            model_dir: str):
+            model_dir: str,
+            mpi_support: Boolean):
         interactions = self._handle_partition_dataset(interactions)
         self._validate_datasets(interactions, user_features=user_features,
                                 item_features=item_features)
@@ -143,7 +143,8 @@ class TrainWideAndDeepRecommenderModule:
                                  user_dim=user_dim,
                                  item_dim=item_dim,
                                  categorical_feature_dim=categorical_feature_dim,
-                                 model_dir=model_dir)
+                                 model_dir=model_dir,
+                                 mpi_support=mpi_support)
         model.train(interactions=interactions, user_features=user_features, item_features=item_features)
-        if hvd.rank() == 0:
+        if model.mpi_support and model.hvd_rank == 0 or not model.mpi_support:
             self.dumper(model, model_dir)

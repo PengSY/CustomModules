@@ -106,6 +106,17 @@ inputs:
     type: Boolean
     default: true
     description: Whether to use batch normalization after each hidden layer
+  - name: NodeCount
+      type: Int
+      default: 3
+      min: 2
+  - name: Communicator
+    type: string
+    default: IntelMpi
+  - name: MpiProcessCountPerNode
+    type: Int
+    default: 1
+    min: 1
 outputs:
   - name: Trained Wide and Deep recommendation model
     type: ModelDirectory

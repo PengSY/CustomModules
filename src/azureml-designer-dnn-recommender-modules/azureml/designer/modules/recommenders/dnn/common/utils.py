@@ -84,6 +84,9 @@ def convert_params(params, param_annotations):
     for name, internal_type in param_annotations.items():
         if name == "return":
             continue
+        if name == "mpi_support":
+            communicator = params.get("Communicator", None)
+            internal_params[name] = communicator is not None
         try:
             param = params[name]
         except KeyError:

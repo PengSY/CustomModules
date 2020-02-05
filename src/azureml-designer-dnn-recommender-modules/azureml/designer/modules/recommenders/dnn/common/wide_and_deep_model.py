@@ -1,5 +1,6 @@
 import itertools
 import math
+import importlib
 import tensorflow as tf
 import pandas as pd
 from azureml.studio.core.logger import module_logger
@@ -10,7 +11,8 @@ from azureml.designer.modules.recommenders.dnn.common.extend_types import DeepAc
 from azureml.designer.modules.recommenders.dnn.common.dataset import WideDeepDataset, FeatureDataset, InteractionDataset
 from azureml.designer.modules.recommenders.dnn.wide_and_deep.train. \
     train_log_hook import TrainLogHook
-import horovod.tensorflow as hvd
+
+_HVD_LIB = None
 
 
 class NanLossDuringTrainingError(UserError):
@@ -35,7 +37,7 @@ class WideAndDeepModel:
 
     def __init__(self, epochs, batch_size, wide_part_optimizer, wide_learning_rate, deep_part_optimizer,
                  deep_learning_rate, deep_hidden_units, deep_activation_fn, deep_dropout, batch_norm, crossed_dim,
-                 user_dim, item_dim, categorical_feature_dim, model_dir):
+                 user_dim, item_dim, categorical_feature_dim, model_dir, mpi_support):
         self.epochs = epochs
         self.batch_size = batch_size
         self.wide_part_optimizer = wide_part_optimizer
@@ -58,10 +60,24 @@ class WideAndDeepModel:
         self.user_features = None
         self.item_features = None
 
-        hvd.init()
-        self.hvd_rank = hvd.rank()
+        self.hvd_rank = None
+        self.hvd_size = None
+        if mpi_support:
+            self._init_mpi_support()
+
+    @property
+    def mpi_support(self):
+        return self.hvd_rank is not None
+
+    def _init_mpi_support(self):
+        _HVD_LIB = importlib.import_module("horovod.tensorflow")
+
+        _HVD_LIB.init()
+        self.hvd_rank = _HVD_LIB.rank()
+        self.hvd_size = _HVD_LIB.size()
+
         gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
-        tf.config.experimental.set_visible_devices(gpus[hvd.local_rank()], 'GPU')
+        tf.config.experimental.set_visible_devices(gpus[_HVD_LIB.local_rank()], 'GPU')
         if self.hvd_rank != 0:
             self.model_dir = None
 
@@ -107,8 +123,10 @@ class WideAndDeepModel:
             optimizer = self.OPTIMIZERS[optimizer_name]
         except KeyError:
             raise ValueError(f"Unsupported optimizer {optimizer_name}")
-        distributed_optimizer = hvd.DistributedOptimizer(optimizer(learning_rate=learning_rate * hvd.size()))
-        return distributed_optimizer
+        if self.mpi_support:
+            # Todo: not all workers contributes to an update
+            optimizer = _HVD_LIB.DistributedOptimizer(optimizer(learning_rate=learning_rate * self.hvd_size))
+        return optimizer
 
     def _build_activation_fn(self, activation_fn_name):
         try:
@@ -156,6 +174,18 @@ class WideAndDeepModel:
                            f"Batch norm: {self.batch_norm}\n")
         return model
 
+    def _get_epochs(self):
+        if not self.mpi_support:
+            return self.epochs
+
+        ave_epochs = int(self.epochs / self.hvd_size)
+        local_epochs = ave_epochs
+        unallocated_epochs = self.epochs - ave_epochs * self.hvd_size
+        if unallocated_epochs > 0:
+            if self.hvd_rank < unallocated_epochs:
+                local_epochs += 1
+        return local_epochs
+
     def train(self, interactions: InteractionDataset, user_features: FeatureDataset = None,
               item_features: FeatureDataset = None):
         training_data = WideDeepDataset(interactions=interactions, user_features=user_features,
@@ -166,12 +196,16 @@ class WideAndDeepModel:
         training_data = self.feature_builder.build(training_data)
         self.steps_per_iteration = math.ceil(training_data.row_size / self.batch_size)
         model = self._build_model()
-        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=int(self.epochs / hvd.size()))
+        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=self._get_epochs())
+
         log_hook = TrainLogHook(steps_per_iter=self.steps_per_iteration)
+        hooks = [log_hook]
+        if self.mpi_support:
+            hooks.append(_HVD_LIB.BroadcastGlobalVariablesHook(0))
+
         module_logger.info(f"Start to train model, rank {self.hvd_rank}")
-        bcast_hook = hvd.BroadcastGlobalVariablesHook(0)
         try:
-            model.train(input_fn=input_fn, hooks=[log_hook, bcast_hook])
+            model.train(input_fn=input_fn, hooks=hooks)
         except tf.estimator.NanLossDuringTrainingError:
             raise NanLossDuringTrainingError
 
