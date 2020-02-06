@@ -1,4 +1,4 @@
-name: Score Wide & Deep Recommender
+name: Parallel Score Wide & Deep Recommender
 id: 6aea3be1-d2b8-43e6-aa47-acfceb57935e
 version: 0.0.1.763732
 isDeterministic: true
@@ -75,7 +75,11 @@ implementation:
       dependencies:
         - python=3.6.8
         - pip:
-            - azureml-designer-dnn-recommender-modules==0.0.1
+            - pyyaml==5.1.2
+            - pytest==5.3.1
+            - azureml-designer-internal==0.0.10.*
+            - tensorflow-gpu==2.0.0
+            - git+https://github.com/PengSY/CustomModules.git@cc3775dccfb8be02ea8ac5c97687cf06ada39f96#subdirectory=src/azureml-designer-dnn-recommender-modules
     command:
       - python
       - -m

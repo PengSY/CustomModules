@@ -87,6 +87,7 @@ def convert_params(params, param_annotations):
         if name == "mpi_support":
             communicator = params.get("Communicator", None)
             internal_params[name] = communicator is not None
+            continue
         try:
             param = params[name]
         except KeyError:
@@ -107,7 +108,7 @@ def set_param_values(params, name_value_map: dict):
 def update_required_params(normal_params, port_params, obj):
     required_params = port_params.copy()
     for internal_name, param in normal_params.items():
-        if getattr(obj, internal_name, None) is None:
+        if getattr(obj, internal_name, None) is None and not param.extra:
             required_params[internal_name] = param
     return required_params
 

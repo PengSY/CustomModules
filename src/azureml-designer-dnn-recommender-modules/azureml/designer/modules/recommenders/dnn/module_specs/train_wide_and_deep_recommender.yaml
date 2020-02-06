@@ -1,4 +1,4 @@
-name: Train Wide & Deep Recommender
+name: Parallel Train Wide & Deep Recommender
 id: 069e5ec6-f5ff-41c9-8801-3b3235344af5
 version: 0.0.1.763732
 isDeterministic: true
@@ -107,11 +107,11 @@ inputs:
     default: true
     description: Whether to use batch normalization after each hidden layer
   - name: NodeCount
-      type: Int
-      default: 3
-      min: 2
+    type: Int
+    default: 3
+    min: 2
   - name: Communicator
-    type: string
+    type: String
     default: IntelMpi
   - name: MpiProcessCountPerNode
     type: Int
@@ -133,7 +133,12 @@ implementation:
       dependencies:
         - python=3.6.8
         - pip:
-            - azureml-designer-dnn-recommender-modules==0.0.1
+            - pyyaml==5.1.2
+            - pytest==5.3.1
+            - azureml-designer-internal==0.0.10.*
+            - tensorflow-gpu==2.0.0
+            - horovod==0.18.1
+            - git+https://github.com/PengSY/CustomModules.git@cc3775dccfb8be02ea8ac5c97687cf06ada39f96#subdirectory=src/azureml-designer-dnn-recommender-modules
     command:
       - python
       - -m

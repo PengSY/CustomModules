@@ -32,7 +32,8 @@ class MiddleParam:
                  optional=False,
                  is_port=False,
                  parent_internal_name=None,
-                 parent_value=None):
+                 parent_value=None,
+                 extra=False):
         self.internal_name = internal_name
         self.name = name
         self.type = type
@@ -41,6 +42,8 @@ class MiddleParam:
         self.is_port = is_port
         self.parent_internal_name = parent_internal_name
         self.parent_value = parent_value
+        # this attr shows whether param is a command line arg
+        self.extra = extra
 
 
 def get_params(data: list, internal_name_lookup: dict, parent_internal_name=None, parent_value=None):
@@ -51,7 +54,11 @@ def get_params(data: list, internal_name_lookup: dict, parent_internal_name=None
         param.type = input['type']
         param.optional = input.get('optional', False)
         param.is_port = input.get('port', False)
-        param.internal_name = internal_name_lookup[param.name]
+        if param.name in internal_name_lookup:
+            param.internal_name = internal_name_lookup[param.name]
+        else:
+            param.internal_name = param.name
+            param.extra = True
         param.parent_internal_name = parent_internal_name
         param.parent_value = parent_value
         params[param.internal_name] = param
@@ -101,6 +108,8 @@ def build_params(spec_file):
 def build_command_line(params):
     parser = argparse.ArgumentParser()
     for _, param in params.items():
+        if param.extra:
+            continue
         parser.add_argument('--' + param.internal_name, type=MIDDLE_TYPES[param.type], default=None)
     return parser
 
