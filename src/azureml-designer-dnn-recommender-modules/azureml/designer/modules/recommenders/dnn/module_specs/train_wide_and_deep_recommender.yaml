@@ -1,6 +1,6 @@
 name: Parallel Train Wide & Deep Recommender
-id: 069e5ec6-f5ff-41c9-8801-3b3235344af5
-version: 0.0.1.763732
+id: 305525f5-6c32-4502-a04a-b5332c180cda
+version: 0.0.1.763776
 isDeterministic: true
 category: Recommendation
 description: Train a recommender based on Wide & Deep model.
@@ -124,7 +124,7 @@ outputs:
 implementation:
   container:
     runConfig:
-      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:intelmpi2018.3-cuda10.0-cudnn7-ubuntu16.04
+      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:openmpi3.1.2-cuda10.0-cudnn7-ubuntu18.04
       gpuSupport: True
     conda:
       name: project_environment
@@ -138,11 +138,8 @@ implementation:
             - azureml-designer-internal==0.0.10.*
             - tensorflow-gpu==2.0.0
             - horovod==0.18.1
-            - git+https://github.com/PengSY/CustomModules.git@cc3775dccfb8be02ea8ac5c97687cf06ada39f96#subdirectory=src/azureml-designer-dnn-recommender-modules
-    command:
-      - python
-      - -m
-      - azureml.designer.modules.recommenders.dnn.wide_and_deep.train.run
+            - git+https://github.com/PengSY/CustomModules.git@6c70ec9e5d16c270ca8f8ee295be158d396df858#subdirectory=src/azureml-designer-dnn-recommender-modules
+    entry: run_train.py
     args:
       - --interactions
       - inputPath: Training dataset of user-item-rating triples

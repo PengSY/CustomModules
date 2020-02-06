@@ -1,6 +1,6 @@
 name: Parallel Score Wide & Deep Recommender
-id: 6aea3be1-d2b8-43e6-aa47-acfceb57935e
-version: 0.0.1.763732
+id: 1c82c7da-e598-4a39-91e7-260a7c0a678b
+version: 0.0.1.763776
 isDeterministic: true
 category: Recommendation
 description: Score a dataset using the Wide and Deep recommendation model.
@@ -79,11 +79,8 @@ implementation:
             - pytest==5.3.1
             - azureml-designer-internal==0.0.10.*
             - tensorflow-gpu==2.0.0
-            - git+https://github.com/PengSY/CustomModules.git@cc3775dccfb8be02ea8ac5c97687cf06ada39f96#subdirectory=src/azureml-designer-dnn-recommender-modules
-    command:
-      - python
-      - -m
-      - azureml.designer.modules.recommenders.dnn.wide_and_deep.score.run
+            - git+https://github.com/PengSY/CustomModules.git@6c70ec9e5d16c270ca8f8ee295be158d396df858#subdirectory=src/azureml-designer-dnn-recommender-modules
+    entry: run_score.py
     args:
       - --learner
       - inputPath: Trained Wide and Deep recommendation model
