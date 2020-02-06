@@ -70,6 +70,7 @@ class WideAndDeepModel:
         return self.hvd_rank is not None
 
     def _init_mpi_support(self):
+        global _HVD_LIB
         _HVD_LIB = importlib.import_module("horovod.tensorflow")
 
         _HVD_LIB.init()
@@ -184,6 +185,7 @@ class WideAndDeepModel:
         if unallocated_epochs > 0:
             if self.hvd_rank < unallocated_epochs:
                 local_epochs += 1
+        module_logger.info(f"Get {local_epochs} epochs")
         return local_epochs
 
     def train(self, interactions: InteractionDataset, user_features: FeatureDataset = None,
