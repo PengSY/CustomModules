@@ -81,7 +81,7 @@ class FeatureBuilder:
                                                                feature_group=FeatureGroup.ItemFeature)
         return self
 
-    def build(self, dataset: WideDeepDataset):
+    def build(self, dataset: WideDeepDataset, hvd_size=None, hvd_rank=None):
         dataset_df = dataset.df
         for feature_meta in self.user_feature_metas + self.item_feature_metas:
             if feature_meta.feature_type == ColumnTypeName.NUMERIC:
@@ -93,6 +93,12 @@ class FeatureBuilder:
             else:
                 dataset_df[feature_meta.internal_name] = dataset_df[feature_meta.internal_name].fillna(
                     feature_meta.fillna_value)
+        if hvd_size is not None and hvd_rank is not None:
+            total_sample = dataset.row_size
+            local_sample = total_sample // hvd_size
+            local_df = dataset_df.iloc[hvd_rank * local_sample:(hvd_rank + 1) * local_sample, :]
+            dataset.df = local_df
+
         dataset.build_column_attributes()
         return dataset
 

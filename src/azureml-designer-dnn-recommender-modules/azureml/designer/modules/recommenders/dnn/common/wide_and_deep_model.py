@@ -175,19 +175,6 @@ class WideAndDeepModel:
                            f"Batch norm: {self.batch_norm}\n")
         return model
 
-    def _get_epochs(self):
-        if not self.mpi_support:
-            return self.epochs
-
-        ave_epochs = int(self.epochs / self.hvd_size)
-        local_epochs = ave_epochs
-        unallocated_epochs = self.epochs - ave_epochs * self.hvd_size
-        if unallocated_epochs > 0:
-            if self.hvd_rank < unallocated_epochs:
-                local_epochs += 1
-        module_logger.info(f"Get {local_epochs} epochs")
-        return local_epochs
-
     def train(self, interactions: InteractionDataset, user_features: FeatureDataset = None,
               item_features: FeatureDataset = None):
         training_data = WideDeepDataset(interactions=interactions, user_features=user_features,
@@ -195,10 +182,10 @@ class WideAndDeepModel:
         module_logger.info(f"Fit and build features.")
         self.feature_builder = FeatureBuilder().fit(dataset=training_data, user_features=user_features,
                                                     item_features=item_features)
-        training_data = self.feature_builder.build(training_data)
+        training_data = self.feature_builder.build(training_data, hvd_size=self.hvd_size, hvd_rank=self.hvd_rank)
         self.steps_per_iteration = math.ceil(training_data.row_size / self.batch_size)
         model = self._build_model()
-        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=self._get_epochs())
+        input_fn = training_data.get_input_handler(batch_size=self.batch_size, epochs=self.epochs)
 
         log_hook = TrainLogHook(steps_per_iter=self.steps_per_iteration)
         hooks = [log_hook]
