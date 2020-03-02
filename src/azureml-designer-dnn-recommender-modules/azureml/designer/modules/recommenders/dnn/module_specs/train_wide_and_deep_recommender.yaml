@@ -1,0 +1,170 @@
+name: Train Wide & Deep Recommender
+id: 069e5ec6-f5ff-41c9-8801-3b3235344af5
+version: 0.0.1.763732
+isDeterministic: true
+category: Recommendation
+description: Train a recommender based on Wide & Deep model.
+inputs:
+  - name: Training dataset of user-item-rating triples
+    type: DataFrameDirectory
+    port: true
+    description: Ratings of items by users, expressed as triple (User, Item, Rating)
+  - name: User features
+    type: DataFrameDirectory
+    port: true
+    optional: true
+    description: User features
+  - name: Item features
+    type: DataFrameDirectory
+    port: true
+    optional: true
+    description: Item features
+  - name: Epochs
+    type: Int
+    default: 10
+    description: Maximum number of epochs to perform while training
+    min: 1
+  - name: Batch size
+    type: Int
+    default: 32
+    description: Number of consecutive samples to combine in a single batch
+  - name: Wide part optimizer
+    type: Mode
+    default: Adagrad
+    description: Optimizer used to apply gradients to the wide part of the model
+    options:
+      - Adagrad
+      - Adam
+      - Ftrl
+      - RMSProp
+      - SGD
+      - Adadelta
+  - name: Wide optimizer learning rate
+    type: Float
+    default: 0.005
+    description: Size of each step in the learning process for wide part of the model
+    min: 2.220446049250313e-16
+    max: 2.0
+  - name: Crossed feature dimension
+    type: Int
+    default: 1000
+    description: Crossed feature dimension for wide part model
+    min: 1
+  - name: Deep part optimizer
+    type: Mode
+    default: Adadelta
+    description: Optimizer used to apply gradients to the deep part of the model
+    options:
+      - Adagrad
+      - Adam
+      - Ftrl
+      - RMSProp
+      - SGD
+      - Adadelta
+  - name: Deep optimizer learning rate
+    type: Float
+    default: 0.001
+    description: Size of each step in the learning process for deep part of the model
+    min: 2.220446049250313e-16
+    max: 2.0
+  - name: User embedding dimension
+    type: Int
+    default: 2
+    description: User embedding dimension for deep part model
+    min: 1
+  - name: Item embedding dimension
+    type: Int
+    default: 2
+    description: Item embedding dimension for deep part model
+    min: 1
+  - name: Categorical features embedding dimension
+    type: Int
+    default: 4
+    description: Categorical features embedding dimension for deep part model
+    min: 1
+  - name: Hidden units
+    type: String
+    default: '512,256,64'
+    description: Hidden units per layer for deep part model
+  - name: Activation function
+    type: Mode
+    default: ReLU
+    description: Activation function applied to each layer in deep part model
+    options:
+      - ReLU
+      - Sigmoid
+      - Tanh
+      - Linear
+      - LeakyReLU
+  - name: Dropout
+    type: Float
+    default: 0.5
+    description: Probability that each element is dropped in deep part model
+    min: 0
+    max: 1.0
+  - name: Batch Normalization
+    type: Boolean
+    default: true
+    description: Whether to use batch normalization after each hidden layer
+outputs:
+  - name: Trained Wide and Deep recommendation model
+    type: ModelDirectory
+    description: Trained Wide and Deep recommendation model
+implementation:
+  container:
+    runConfig:
+      baseDockerImage: mcr.microsoft.com/azureml/base-gpu:intelmpi2018.3-cuda10.0-cudnn7-ubuntu16.04
+      gpuSupport: True
+    conda:
+      name: project_environment
+      channels:
+        - defaults
+      dependencies:
+        - python=3.6.8
+        - pip:
+            - azureml-designer-dnn-recommender-modules==0.0.1
+    command:
+      - python
+      - -m
+      - azureml.designer.modules.recommenders.dnn.wide_and_deep.train.run
+    args:
+      - --interactions
+      - inputPath: Training dataset of user-item-rating triples
+      - --item_features
+      - inputPath: Item features
+      - --user_features
+      - inputPath: User features
+      - --epochs
+      - inputValue: Epochs
+      - --batch_size
+      - inputValue: Batch size
+      - --wide_part_optimizer
+      - inputValue: Wide part optimizer
+      - --wide_learning_rate
+      - inputValue: Wide optimizer learning rate
+      - --crossed_dim
+      - inputValue: Crossed feature dimension
+      - --deep_part_optimizer
+      - inputValue: Deep part optimizer
+      - --deep_learning_rate
+      - inputValue: Deep optimizer learning rate
+      - --user_dim
+      - inputValue: User embedding dimension
+      - --item_dim
+      - inputValue: Item embedding dimension
+      - --categorical_feature_dim
+      - inputValue: Categorical features embedding dimension
+      - --deep_hidden_units
+      - inputValue: Hidden units
+      - --deep_activation_fn
+      - inputValue: Activation function
+      - --deep_dropout
+      - inputValue: Dropout
+      - --batch_norm
+      - inputValue: Batch Normalization
+      - --model_dir
+      - outputPath: Trained Wide and Deep recommendation model
+  invoking:
+    module: azureml.designer.modules.recommenders.dnn.wide_and_deep.train.train_wide_and_deep_recommender
+    class: TrainWideAndDeepRecommenderModule
+    func: run
