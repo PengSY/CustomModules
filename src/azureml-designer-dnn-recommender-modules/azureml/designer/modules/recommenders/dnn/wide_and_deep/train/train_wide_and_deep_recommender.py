@@ -132,3 +132,4 @@ class TrainWideAndDeepRecommenderModule:
                                item_feature_builder=item_feature_builder)
         model.train(transactions=transactions)
         model.save()
+        return model
