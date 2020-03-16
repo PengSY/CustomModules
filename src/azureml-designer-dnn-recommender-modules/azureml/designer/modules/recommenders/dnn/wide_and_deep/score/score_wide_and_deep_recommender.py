@@ -1,10 +1,9 @@
 from enum import Enum
 from azureml.studio.core.data_frame_schema import DataFrameSchema
 from azureml.studio.core.io.data_frame_directory import save_data_frame_to_directory
-from azureml.studio.core.logger import module_logger
 from azureml.studio.internal.error import ErrorMapping
-from azureml.designer.modules.recommenders.dnn.common.dataset import InteractionDataset, FeatureDataset
-from azureml.designer.modules.recommenders.dnn.wide_and_deep.common.wide_and_deep_model import WideAndDeepModel
+from azureml.designer.modules.recommenders.dnn.common.dataset import TransactionDataset, FeatureDataset
+from azureml.designer.modules.recommenders.dnn.wide_and_deep.common.wide_n_deep_model import WideNDeepModel
 from azureml.designer.modules.recommenders.dnn.wide_and_deep.score. \
     rating_prediction_scorer import RatingPredictionScorer
 from azureml.designer.modules.recommenders.dnn.wide_and_deep.score. \
@@ -36,7 +35,6 @@ class ScoreWideAndDeepRecommenderModule:
                  max_recommended_item_count: int = None,
                  min_recommendation_pool_size: int = None,
                  return_ratings: Boolean = None):
-        module_logger.info(f"Init score params.")
         self.prediction_kind = prediction_kind
         self.recommended_item_selection = recommended_item_selection
         self.max_recommended_item_count = max_recommended_item_count
@@ -70,18 +68,18 @@ class ScoreWideAndDeepRecommenderModule:
                 setattr(self, attr_name, attr_value)
 
     @staticmethod
-    def set_inputs_name(test_interactions: InteractionDataset, training_interactions: InteractionDataset = None,
+    def set_inputs_name(test_transactions: TransactionDataset, training_transactions: TransactionDataset = None,
                         user_features: FeatureDataset = None, item_features: FeatureDataset = None):
-        _INTERACTIONS_NAME = "Dataset to score"
+        _TRANSACTIONS_NAME = "Dataset to score"
         _USER_FEATURES_NAME = "User features"
         _ITEM_FEATURES_NAME = "Item features"
-        _TRAINING_INTERACTIONS_NAME = "Training data"
-        if test_interactions is not None:
-            test_interactions.name = _INTERACTIONS_NAME
+        _TRAINING_TRANSACTIONS_NAME = "Training data"
+        if test_transactions is not None:
+            test_transactions.name = _TRANSACTIONS_NAME
         else:
-            ErrorMapping.verify_not_null_or_empty(x=test_interactions, name=_INTERACTIONS_NAME)
-        if training_interactions is not None:
-            training_interactions.name = _TRAINING_INTERACTIONS_NAME
+            ErrorMapping.verify_not_null_or_empty(x=test_transactions, name=_TRANSACTIONS_NAME)
+        if training_transactions is not None:
+            training_transactions.name = _TRAINING_TRANSACTIONS_NAME
         if user_features is not None:
             user_features.name = _USER_FEATURES_NAME
         if item_features is not None:
@@ -89,9 +87,9 @@ class ScoreWideAndDeepRecommenderModule:
 
     @params_loader
     def run(self,
-            learner: WideAndDeepModel,
-            test_interactions: InteractionDataset,
-            training_interactions: InteractionDataset,
+            learner: WideNDeepModel,
+            test_transactions: TransactionDataset,
+            training_transactions: TransactionDataset,
             user_features: FeatureDataset,
             item_features: FeatureDataset,
             prediction_kind: RecommenderPredictionKind = None,
@@ -100,18 +98,16 @@ class ScoreWideAndDeepRecommenderModule:
             min_recommendation_pool_size: int = None,
             return_ratings: Boolean = None,
             scored_data: str = None):
-        module_logger.info(f"Update score params.")
         self.update_params(prediction_kind, recommended_item_selection, max_recommended_item_count,
                            min_recommendation_pool_size, return_ratings)
-        self.set_inputs_name(test_interactions, training_interactions, user_features=user_features,
+        self.set_inputs_name(test_transactions, training_transactions, user_features=user_features,
                              item_features=item_features)
-        module_logger.info(f"Get scorer.")
         scorer = self.get_scorer(self.prediction_kind, self.recommended_item_selection)
         res = scorer.score(learner,
-                           test_interactions=test_interactions,
+                           test_transactions=test_transactions,
                            user_features=user_features,
                            item_features=item_features,
-                           training_interactions=training_interactions,
+                           training_transactions=training_transactions,
                            max_recommended_item_count=self.max_recommended_item_count,
                            min_recommendation_pool_size=self.min_recommendation_pool_size,
                            return_ratings=self.return_ratings)

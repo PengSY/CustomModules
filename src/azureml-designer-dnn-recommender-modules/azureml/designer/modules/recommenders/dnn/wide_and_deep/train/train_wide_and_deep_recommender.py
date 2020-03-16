@@ -1,37 +1,27 @@
-import os
-import pickle
 from azureml.studio.internal.error import ErrorMapping, MoreThanOneRatingError, DuplicateFeatureDefinitionError, \
     InvalidDatasetError, InvalidColumnTypeError
 from azureml.studio.core.data_frame_schema import ColumnTypeName
-from azureml.designer.modules.recommenders.dnn.common.constants import INTERACTIONS_RATING_COL, INTERACTIONS_USER_COL, \
-    INTERACTIONS_ITEM_COL, VALID_FEATURE_TYPE, MODEL_NAME
+from azureml.designer.modules.recommenders.dnn.common.constants import TRANSACTIONS_RATING_COL, TRANSACTIONS_USER_COL, \
+    TRANSACTIONS_ITEM_COL
 from azureml.designer.modules.recommenders.dnn.common.entry_param import IntTuple, Boolean
-from azureml.designer.modules.recommenders.dnn.common.dataset import InteractionDataset, FeatureDataset, Dataset
-from azureml.designer.modules.recommenders.dnn.wide_and_deep.common.wide_and_deep_model import WideAndDeepModel, \
-    OptimizerSelection, DeepActivationSelection
+from azureml.designer.modules.recommenders.dnn.common.dataset import TransactionDataset, FeatureDataset
 from azureml.designer.modules.recommenders.dnn.common.entry_utils import params_loader
+from azureml.designer.modules.recommenders.dnn.wide_and_deep.common.preprocess import preprocess_features, \
+    preprocess_transactions
+from azureml.designer.modules.recommenders.dnn.common.feature_builder import FeatureBuilder
+from azureml.designer.modules.recommenders.dnn.wide_and_deep.common.wide_n_deep_model import WideNDeepModel, \
+    WideNDeepModelHyperParams, OptimizerSelection, ActivationFnSelection
+from azureml.designer.modules.recommenders.dnn.common.constants import USER_INTERNAL_KEY, ITEM_INTERNAL_KEY
 
 
 class TrainWideAndDeepRecommenderModule:
     @staticmethod
     def _validate_features_column_type(dataset: FeatureDataset):
-        id_col = dataset.ids.name
         for col in dataset.columns:
-            if col != id_col:
-                TrainWideAndDeepRecommenderModule._validate_column_type_in(dataset, VALID_FEATURE_TYPE, col)
-            else:
-                if dataset.get_column_type(col) == ColumnTypeName.NAN:
-                    ErrorMapping.throw(InvalidColumnTypeError(col_type=dataset.get_column_type(col),
-                                                              col_name=col,
-                                                              arg_name=dataset.name))
-
-    @staticmethod
-    def _validate_column_type_in(dataset: Dataset, valid_types, column):
-        if dataset.get_column_type(column) not in valid_types:
-            ErrorMapping.verify_element_type(type_=dataset.get_column_type(column),
-                                             expected_type=' or '.join(valid_types),
-                                             column_name=column,
-                                             arg_name=dataset.name)
+            if dataset.get_column_type(col) == ColumnTypeName.NAN:
+                ErrorMapping.throw(InvalidColumnTypeError(col_type=dataset.get_column_type(col),
+                                                          col_name=col,
+                                                          arg_name=dataset.name))
 
     @staticmethod
     def _validate_feature_dataset(dataset: FeatureDataset):
@@ -44,40 +34,43 @@ class TrainWideAndDeepRecommenderModule:
         TrainWideAndDeepRecommenderModule._validate_features_column_type(dataset)
 
     @staticmethod
-    def _validate_datasets(interactions: InteractionDataset, user_features: FeatureDataset = None,
+    def _validate_datasets(transactions: TransactionDataset, user_features: FeatureDataset = None,
                            item_features: FeatureDataset = None):
-        ErrorMapping.verify_number_of_columns_equal_to(curr_column_count=interactions.column_size,
+        ErrorMapping.verify_number_of_columns_equal_to(curr_column_count=transactions.column_size,
                                                        required_column_count=3,
-                                                       arg_name=interactions.name)
-        ErrorMapping.verify_number_of_rows_greater_than_or_equal_to(curr_row_count=interactions.row_size,
+                                                       arg_name=transactions.name)
+        ErrorMapping.verify_number_of_rows_greater_than_or_equal_to(curr_row_count=transactions.row_size,
                                                                     required_row_count=1,
-                                                                    arg_name=interactions.name)
-        ErrorMapping.verify_element_type(type_=interactions.get_column_type(INTERACTIONS_RATING_COL),
+                                                                    arg_name=transactions.name)
+        ErrorMapping.verify_element_type(type_=transactions.get_column_type(TRANSACTIONS_RATING_COL),
                                          expected_type=ColumnTypeName.NUMERIC,
-                                         column_name=interactions.ratings.name,
-                                         arg_name=interactions.name)
+                                         column_name=transactions.ratings.name,
+                                         arg_name=transactions.name)
         if user_features is not None:
             TrainWideAndDeepRecommenderModule._validate_feature_dataset(user_features)
         if item_features is not None:
             TrainWideAndDeepRecommenderModule._validate_feature_dataset(item_features)
 
     @staticmethod
-    def _preprocess(interactions: InteractionDataset, user_features: FeatureDataset, item_features: FeatureDataset):
-        interactions = interactions.preprocess()
-        user_features = user_features.preprocess_ids() if user_features is not None else None
-        item_features = item_features.preprocess_ids() if item_features is not None else None
-        TrainWideAndDeepRecommenderModule._validate_preprocessed_dataset(interactions, user_features=user_features,
+    def _preprocess(transactions: TransactionDataset, user_features: FeatureDataset, item_features: FeatureDataset):
+        # preprocess transactions data
+        transactions = preprocess_transactions(transactions)
+
+        # preprocess user features
+        user_features = preprocess_features(user_features) if user_features is not None else None
+        item_features = preprocess_features(item_features) if item_features is not None else None
+        TrainWideAndDeepRecommenderModule._validate_preprocessed_dataset(transactions, user_features=user_features,
                                                                          item_features=item_features)
-        return interactions, user_features, item_features
+        return transactions, user_features, item_features
 
     @staticmethod
-    def _validate_preprocessed_dataset(interactions: InteractionDataset, user_features: FeatureDataset,
+    def _validate_preprocessed_dataset(transactions: TransactionDataset, user_features: FeatureDataset,
                                        item_features: FeatureDataset):
-        if interactions.row_size <= 0:
+        if transactions.row_size <= 0:
             ErrorMapping.throw(
-                InvalidDatasetError(dataset1=interactions.name, reason=f"dataset does not have any valid samples"))
-        if interactions.df.duplicated(
-                subset=interactions.columns[[INTERACTIONS_USER_COL, INTERACTIONS_ITEM_COL]]).any():
+                InvalidDatasetError(dataset1=transactions.name, reason=f"dataset does not have any valid samples"))
+        if transactions.df.duplicated(
+                subset=transactions.columns[[TRANSACTIONS_USER_COL, TRANSACTIONS_ITEM_COL]]).any():
             ErrorMapping.throw(MoreThanOneRatingError())
 
         if user_features is not None and any(user_features.df.duplicated(subset=user_features.ids.name)):
@@ -86,21 +79,15 @@ class TrainWideAndDeepRecommenderModule:
             ErrorMapping.throw(DuplicateFeatureDefinitionError())
 
     @staticmethod
-    def dumper(model: WideAndDeepModel, model_dir):
-        save_path = os.path.join(model_dir, MODEL_NAME + '.pkl')
-        with open(save_path, "wb") as f:
-            pickle.dump(model, f)
-
-    @staticmethod
-    def set_inputs_name(interactions: InteractionDataset, user_features: FeatureDataset = None,
+    def set_inputs_name(transactions: TransactionDataset, user_features: FeatureDataset = None,
                         item_features: FeatureDataset = None):
-        _INTERACTIONS_NAME = "Training dataset of user-item-rating triples"
+        _TRANSACTIONS_NAME = "Training dataset of user-item-rating triples"
         _USER_FEATURES_NAME = "User features"
         _ITEM_FEATURES_NAME = "Item features"
-        if interactions is not None:
-            interactions.name = _INTERACTIONS_NAME
+        if transactions is not None:
+            transactions.name = _TRANSACTIONS_NAME
         else:
-            ErrorMapping.verify_not_null_or_empty(x=interactions, name=_INTERACTIONS_NAME)
+            ErrorMapping.verify_not_null_or_empty(x=transactions, name=_TRANSACTIONS_NAME)
         if user_features is not None:
             user_features.name = _USER_FEATURES_NAME
         if item_features is not None:
@@ -108,44 +95,40 @@ class TrainWideAndDeepRecommenderModule:
 
     @params_loader
     def run(self,
-            interactions: InteractionDataset,
+            transactions: TransactionDataset,
             user_features: FeatureDataset,
             item_features: FeatureDataset,
             epochs: int,
             batch_size: int,
-            wide_part_optimizer: OptimizerSelection,
-            wide_learning_rate: float,
+            wide_optimizer: OptimizerSelection,
+            wide_lr: float,
             crossed_dim: int,
-            deep_part_optimizer: OptimizerSelection,
-            deep_learning_rate: float,
+            deep_optimizer: OptimizerSelection,
+            deep_lr: float,
             user_dim: int,
             item_dim: int,
-            categorical_feature_dim: int,
-            deep_hidden_units: IntTuple,
-            deep_activation_fn: DeepActivationSelection,
-            deep_dropout: float,
+            embed_dim: int,
+            hidden_units: IntTuple,
+            activation_fn: ActivationFnSelection,
+            dropout: float,
             batch_norm: Boolean,
             model_dir: str):
-        self.set_inputs_name(interactions, user_features=user_features, item_features=item_features)
-        self._validate_datasets(interactions, user_features=user_features,
-                                item_features=item_features)
-        self._preprocess(interactions, user_features=user_features,
-                         item_features=item_features)
-        model = WideAndDeepModel(epochs=epochs,
-                                 batch_size=batch_size,
-                                 wide_part_optimizer=wide_part_optimizer,
-                                 wide_learning_rate=wide_learning_rate,
-                                 deep_part_optimizer=deep_part_optimizer,
-                                 deep_learning_rate=deep_learning_rate,
-                                 deep_hidden_units=deep_hidden_units,
-                                 deep_activation_fn=deep_activation_fn,
-                                 deep_dropout=deep_dropout,
-                                 batch_norm=batch_norm,
-                                 crossed_dim=crossed_dim,
-                                 user_dim=user_dim,
-                                 item_dim=item_dim,
-                                 categorical_feature_dim=categorical_feature_dim,
-                                 model_dir=model_dir)
-        model.train(interactions=interactions, user_features=user_features, item_features=item_features)
-        self.dumper(model, model_dir)
-        return model
+        self.set_inputs_name(transactions, user_features=user_features, item_features=item_features)
+        self._validate_datasets(transactions, user_features=user_features, item_features=item_features)
+        self._preprocess(transactions, user_features=user_features, item_features=item_features)
+
+        hyper_params = WideNDeepModelHyperParams(epochs=epochs, batch_size=batch_size,
+                                                 wide_optimizer=wide_optimizer, wide_lr=wide_lr,
+                                                 deep_optimizer=deep_optimizer, deep_lr=deep_lr,
+                                                 hidden_units=hidden_units, activation_fn=activation_fn,
+                                                 dropout=dropout, batch_norm=batch_norm, crossed_dim=crossed_dim,
+                                                 user_dim=user_dim, item_dim=item_dim,
+                                                 embed_dim=embed_dim)
+        user_feature_builder = FeatureBuilder(ids=transactions.users, id_key=USER_INTERNAL_KEY,
+                                              features=user_features, feat_key_suffix='user_feature')
+        item_feature_builder = FeatureBuilder(ids=transactions.items, id_key=ITEM_INTERNAL_KEY,
+                                              features=item_features, feat_key_suffix='item_feature')
+        model = WideNDeepModel(hyper_params=hyper_params, save_dir=model_dir, user_feature_builder=user_feature_builder,
+                               item_feature_builder=item_feature_builder)
+        model.train(transactions=transactions)
+        model.save()

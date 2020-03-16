@@ -128,7 +128,7 @@ implementation:
       - -m
       - azureml.designer.modules.recommenders.dnn.wide_and_deep.train.run
     args:
-      - --interactions
+      - --transactions
       - inputPath: Training dataset of user-item-rating triples
       - --item_features
       - inputPath: Item features
@@ -138,27 +138,27 @@ implementation:
       - inputValue: Epochs
       - --batch_size
       - inputValue: Batch size
-      - --wide_part_optimizer
+      - --wide_optimizer
       - inputValue: Wide part optimizer
-      - --wide_learning_rate
+      - --wide_lr
       - inputValue: Wide optimizer learning rate
       - --crossed_dim
       - inputValue: Crossed feature dimension
-      - --deep_part_optimizer
+      - --deep_optimizer
       - inputValue: Deep part optimizer
-      - --deep_learning_rate
+      - --deep_lr
       - inputValue: Deep optimizer learning rate
       - --user_dim
       - inputValue: User embedding dimension
       - --item_dim
       - inputValue: Item embedding dimension
-      - --categorical_feature_dim
+      - --embed_dim
       - inputValue: Categorical features embedding dimension
-      - --deep_hidden_units
+      - --hidden_units
       - inputValue: Hidden units
-      - --deep_activation_fn
+      - --activation_fn
       - inputValue: Activation function
-      - --deep_dropout
+      - --dropout
       - inputValue: Dropout
       - --batch_norm
       - inputValue: Batch Normalization

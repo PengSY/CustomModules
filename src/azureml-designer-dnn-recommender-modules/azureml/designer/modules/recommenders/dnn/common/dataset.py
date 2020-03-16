@@ -1,8 +1,7 @@
-import numpy as np
 import pandas as pd
 from azureml.studio.core.data_frame_schema import DataFrameSchema
-from azureml.designer.modules.recommenders.dnn.common.constants import INTERACTIONS_USER_COL, INTERACTIONS_ITEM_COL, \
-    FEATURES_ID_COL, INTERACTIONS_RATING_COL
+from azureml.designer.modules.recommenders.dnn.common.constants import TRANSACTIONS_USER_COL, TRANSACTIONS_ITEM_COL, \
+    FEATURES_ID_COL, TRANSACTIONS_RATING_COL
 from azureml.designer.modules.recommenders.dnn.common.entry_param import EntryParam
 from azureml.studio.core.io.data_frame_directory import load_data_frame_from_directory
 
@@ -41,29 +40,36 @@ class Dataset(metaclass=EntryParam):
         return cls(df=df)
 
 
-class InteractionDataset(Dataset):
+class TransactionDataset(Dataset):
     @property
     def users(self):
-        return self.df.iloc[:, INTERACTIONS_USER_COL]
+        return self.df.iloc[:, TRANSACTIONS_USER_COL]
+
+    @users.setter
+    def users(self, users: pd.Series):
+        self.df.iloc[:, TRANSACTIONS_USER_COL] = users
 
     @property
     def items(self):
-        return self.df.iloc[:, INTERACTIONS_ITEM_COL]
+        return self.df.iloc[:, TRANSACTIONS_ITEM_COL]
+
+    @items.setter
+    def items(self, items: pd.Series):
+        self.df.iloc[:, TRANSACTIONS_ITEM_COL] = items
 
     @property
     def ratings(self):
-        return self.df.iloc[:, INTERACTIONS_RATING_COL]
+        if self.column_size - 1 >= TRANSACTIONS_RATING_COL:
+            return self.df.iloc[:, TRANSACTIONS_RATING_COL]
+        else:
+            return None
 
-    def preprocess(self):
-        if self.column_size > 2:
-            self.ratings.replace(to_replace=[np.inf, -np.inf], value=np.nan, inplace=True)
-        self.df = self.df.dropna().reset_index(drop=True)
-
-        id_cols = self.df.columns[:INTERACTIONS_RATING_COL]
-        self.df[id_cols] = self.df[id_cols].astype(str)
-        self.build_column_attributes()
-
-        return self
+    @ratings.setter
+    def ratings(self, ratings):
+        if self.column_size - 1 >= TRANSACTIONS_RATING_COL:
+            self.df.iloc[:, TRANSACTIONS_RATING_COL] = ratings
+        else:
+            self.df[ratings.name] = ratings
 
 
 class FeatureDataset(Dataset):
@@ -71,15 +77,10 @@ class FeatureDataset(Dataset):
     def ids(self):
         return self.df.iloc[:, FEATURES_ID_COL]
 
+    @ids.setter
+    def ids(self, ids):
+        self.df.iloc[:, FEATURES_ID_COL] = ids
+
     @property
     def features(self):
         return self.df.iloc[:, FEATURES_ID_COL + 1:]
-
-    def preprocess_ids(self):
-        # use column slice to avoid error when dataset is invalid
-        self.df = self.df.dropna(subset=self.df.columns[FEATURES_ID_COL:FEATURES_ID_COL + 1]).reset_index(drop=True)
-        id_col = self.df.columns[FEATURES_ID_COL:FEATURES_ID_COL + 1]
-        self.df[id_col] = self.df[id_col].astype(str)
-
-        self.build_column_attributes()
-        return self

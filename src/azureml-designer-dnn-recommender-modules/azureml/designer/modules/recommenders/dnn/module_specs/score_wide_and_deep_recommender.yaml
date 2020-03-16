@@ -83,13 +83,13 @@ implementation:
     args:
       - --learner
       - inputPath: Trained Wide and Deep recommendation model
-      - --test_interactions
+      - --test_transactions
       - inputPath: Dataset to score
       - --user_features
       - inputPath: User features
       - --item_features
       - inputPath: Item features
-      - --training_interactions
+      - --training_transactions
       - inputPath: Training data
       - --prediction_kind
       - inputValue: Recommender prediction kind
